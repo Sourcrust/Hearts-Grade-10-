@@ -1,0 +1,16 @@
+standard_jackS.jpg
+standard_queenS.jpg
+standard_kingS.jpg
+standard_jackH.jpg
+standard_queenH.jpg
+standard_kingH.jpg
+standard_jackC.jpg
+standard_queenC.jpg
+standard_kingC.jpg
+standard_jackD.jpg
+standard_queenD.jpg
+standard_kingD.jpg
+standard_jokerR.jpg
+standard_jokerB.jpg
+xxxxx
+simple_card_back.jpg

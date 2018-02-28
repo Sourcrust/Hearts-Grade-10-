@@ -1,0 +1,153 @@
+
+unit class Card
+    export setCardColourBack, setCardColour, setCardSize, setCardCoordinates, drawCard, flipCard, setDirection, returnCardWidth, returnCardHeight, returnCardX, returnCardY, returnCardC,
+	returnCardBackC, returnCardDir, returnCardN, returnCardisFlipped, returnCardSuit, setCard, changeCardSimpleG, returnCardSimpleG
+    % No way I'm documenting the 6 turing files, those are just case/selection that draws specific boxes
+    include "SpadeCard.t"                                                           % draws spades
+    include "HeartCard.t"                                                           % these are self explainitory
+    include "ClubCard.t"
+    include "DiamondCard.t"
+    include "CardNumber.t"                                                          % draws the number in the corner
+    include "CardBack.t"                                                            % draws the back of a card
+    const FACE_FILE_NAME : string := "face_cards.txt"                               % finds which face cards to use
+    const COLOUR_FILE_NAME : string := "card_colours.txt"                           % finds the typical colours of a card
+    var width, height : int                                                         % dimensions of card
+    var bottom_leftX, bottom_leftY : int                                            % location of card                  
+    var cardC : int := 7                                                            % Card colour
+    var backC : int := 0                                                            % Colourback of the card
+    var direction : int := 1                                                        % direction
+    var cardN : int                                                                 % number value for the card
+    var flipped : boolean := false                                                  % whether the card is flipped
+    var suit : int                                                                  % suit of the card
+    var simpleG : boolean := false                                                  % stores whether simple graphics are used
+    var backCard : int := -1                                                        % stores image for the card back                          
+    var royalCard : int := -1                                                       % stores image for the royal card
+
+    proc changeCardSimpleG                                                          % changes simpleG
+	simpleG := ~simpleG 
+    end changeCardSimpleG
+
+    proc setCardColourBack (c : int)                                                % sets the Card ColourBack
+	backC := c
+    end setCardColourBack
+
+    proc setCardColour (c : int)                                                    % sets the colour of a card
+	cardC := c
+    end setCardColour
+
+    proc setCardSize (w : int, h : int)                                             % sets card dimensions
+	width := w
+	height := h
+    end setCardSize
+
+    proc setCardCoordinates (x : int, y : int)                                      % sets the card coordinates
+	bottom_leftX := x   
+	bottom_leftY := y
+    end setCardCoordinates
+
+    proc setDirection (n : int)                                                     % sets direction
+	direction := n
+    end setDirection
+
+    proc flipCard                                                                   % flips a card
+	flipped := ~flipped
+    end flipCard
+
+    fcn returnCardN : int                                                           % returns the card Number
+	result cardN
+    end returnCardN
+
+    fcn returnCardSuit : int                                                        % returns the card suit
+	result suit
+    end returnCardSuit
+
+    fcn returnCardDir : int                                                         % returns direction
+	result direction
+    end returnCardDir
+
+    fcn returnCardWidth : int                                                       % returns the card width
+	result width
+    end returnCardWidth
+
+    fcn returnCardHeight : int                                                      % returns the card Height
+	result height
+    end returnCardHeight
+
+    fcn returnCardX : int                                                           % returns the x-coordinates of the card
+	result bottom_leftX
+    end returnCardX
+
+    fcn returnCardY : int                                                           % returns the y-coordinates of the card
+	result bottom_leftY
+    end returnCardY
+
+    fcn returnCardSimpleG : boolean                                                 % returns simpleG
+	result simpleG
+    end returnCardSimpleG
+
+    fcn returnCardisFlipped : boolean                                               % returns whetehr card is flipped
+	result flipped
+    end returnCardisFlipped
+
+    fcn returnCardC : int                                                           % retursn card colour
+	result cardC
+    end returnCardC
+
+    fcn returnCardBackC : int                                                       % returns card ColourBack color 
+	result backC
+    end returnCardBackC
+
+    proc setCard (n, s : int)                                                       % set up a card/initializes a card based on card number and suit
+	var faceFile : string
+	var stream : int
+	open : stream, FACE_FILE_NAME, get
+	for i : 1 .. 14
+	    get : stream, faceFile
+	    if i = (s - 1) * 3 + n - 10 and n>10 then
+		royalCard := Pic.FileNew ("RoyalFaces/" + faceFile)
+	    end if
+	end for
+	get : stream, faceFile
+	if faceFile = "xxxxx" then
+	    backCard := -1
+	else
+	    backCard := Pic.FileNew ("CardBacks/" + faceFile)
+	end if
+	close : stream
+	cardN := n
+	suit := s
+	var col : int
+	open : stream, COLOUR_FILE_NAME, get
+	get : stream, col
+	backC := col
+	for i : 1 .. 4
+	    get : stream, col
+	    if i = suit then
+		cardC := col
+		exit
+	    end if
+	end for
+	close : stream
+    end setCard
+
+    proc drawCard                                                                   % draws the card
+	if flipped then
+	    drawCardBack (bottom_leftX, bottom_leftY, width, height, direction, backCard)
+	else
+	    case suit of
+		label 0 :
+		label 1 :
+		    drawSpadeCard (bottom_leftX, bottom_leftY, width, height, cardN, direction, cardC, backC, royalCard, simpleG)
+		label 2 :
+		    drawHeartCard (bottom_leftX, bottom_leftY, width, height, cardN, direction, cardC, backC, royalCard, simpleG)
+		label 3 :
+		    drawClubCard (bottom_leftX, bottom_leftY, width, height, cardN, direction, cardC, backC, royalCard, simpleG)
+		label 4 :
+		    drawDiamondCard (bottom_leftX, bottom_leftY, width, height, cardN, direction, cardC, backC, royalCard, simpleG)
+	    end case
+	    drawCardNumber (bottom_leftX, bottom_leftY, width, height, cardN, direction, cardC, backC)
+	end if
+    end drawCard
+end Card
+
+

@@ -1,0 +1,450 @@
+unit class Hand
+    import Card in "../CardClass/Card.cla"
+    export updateCardLoc,addCard,removeCard,switchCards,shuffleHand,setDimensions,setAllSimpleG,setAllNotSimpleG,flipCards,
+    setFaceUp,setFaceDown,setCardDistance,setCoordinates,setDirection,drawHand,returnSize,returnCardWidth,returnCardHeight,
+    returnHandX,returnHandY,returnCardX,returnCardY,returnCardDis,returnSimpleG,isFlipped,sortByNumber,setRaiseDis,returnRaiseDis,
+    raiseCards,lowerCards,returnRaiseAmount,resetRaised,copyCard,pasteCard,sortBySuit,shadeCard,unshadeCard,returnIsShaded,
+    setCoordinatesByCenter,setCoordinatesByBL,shiftCards, returnShiftAmount,resetShiftAmount,returnDir,returnCardSuit,returnCardNum,
+    returnCardCenterX,returnCardCenterY,returnCard
+    
+    % IT stores the pointes of each card, each cards' raised amount, shift amount, and whether it's shaded 
+    type sets:
+	record
+	    card:pointer to Card
+	    raiseAmount:int
+	    shaded:boolean
+	    shiftAmount:int
+	end record
+
+    var cardW : int:=200                                                % size of cards
+    var cardH : int:=250   
+    var bottom_leftX, bottom_leftY : int                                % coordinates of hands
+    var simpleG:boolean:=false                                          % whether the cards use Simple Graphics
+    var cardDis : int:=20                                               % Distance between each card
+    var cardDir : int:=1                                                % direction
+    var raiseDis : int:=5                                               % How much each card will be raised
+    var shiftDis:int:=5                                                 % How much each card will be shifted
+    var handInfo:flexible array 1..0 of sets                            % Info of each card
+    var colors:array 1..3 of int:=init(0,7,12)                          % array that stores the colors for a non-shaded card
+    var shadeC:array 1..3 of int:=init(21,7,184)                        % array that stores the colors for a shaded card
+    
+    proc updateCardLoc                                                  % sets the coordinates of each card
+	case cardDir of
+	    label 1:
+		for i:1..upper(handInfo)
+		    handInfo(i).card -> setCardCoordinates(bottom_leftX+(i-1)*cardDis+handInfo(i).shiftAmount,bottom_leftY+handInfo(i).raiseAmount)
+		end for
+	    label 2:
+		for i:1..upper(handInfo)
+		    handInfo(i).card -> setCardCoordinates(bottom_leftX+handInfo(i).raiseAmount,(upper(handInfo)-i)*cardDis+bottom_leftY-handInfo(i).shiftAmount)
+		end for
+	    label 3:
+		for i:1..upper(handInfo)
+		    handInfo(i).card -> setCardCoordinates(bottom_leftX+(upper(handInfo)-i)*cardDis-handInfo(i).shiftAmount,bottom_leftY-handInfo(i).raiseAmount)               
+		end for    
+	    label 4:
+		for i:1..upper(handInfo)
+		    handInfo(i).card -> setCardCoordinates(bottom_leftX-handInfo(i).raiseAmount,bottom_leftY+(i-1)*cardDis+handInfo(i).shiftAmount)                
+		end for
+	end case
+    end updateCardLoc
+    
+    proc setCoordinatesByBL(x,y:int)                                    % Sets the coordinates of the hand based on where the bottom-left of the hand would be (If the hand was upsideDown, the Bottom left will appear on the top right)
+	case cardDir of 
+	    label 1:
+		bottom_leftX:=x
+		bottom_leftY:=y
+	    label 2:
+		bottom_leftX:=x
+		bottom_leftY:=y-cardDis*(upper(handInfo)-1)-cardW
+	    label 3:
+		bottom_leftX:=x-cardDis*(upper(handInfo)-1)-cardW
+		bottom_leftY:=y-cardH
+	    label 4:
+		bottom_leftX:=x-cardH
+		bottom_leftY:=y
+	end case
+    end setCoordinatesByBL
+	
+    proc addCard(a,s:int,addr:string)                                   % adds a new card based on what number and suit is needed
+	new handInfo,upper(handInfo)+1
+	var n:int:=upper(handInfo)
+	handInfo(n).raiseAmount:=0
+	handInfo(n).shaded:=false
+	handInfo(n).shiftAmount:=0
+	new Card,handInfo(n).card
+	if simpleG then
+	    handInfo(n).card -> changeCardSimpleG
+	end if
+	handInfo(n).card -> setCard(a,s,addr+"../CardClass/")
+	handInfo(n).card -> setCardSize(cardW,cardH)
+	handInfo(n).card -> setDirection(cardDir)
+	case cardDir of
+	    label 1:
+		handInfo(n).card -> setCardCoordinates(bottom_leftX+(n-1)*cardDis,bottom_leftY)
+	    label 2:
+		handInfo(n).card -> setCardCoordinates(bottom_leftX,bottom_leftY-cardDis)
+	    label 3:
+		handInfo(n).card -> setCardCoordinates(bottom_leftX-cardDis,bottom_leftY) 
+	    label 4:
+		handInfo(n).card -> setCardCoordinates(bottom_leftX,bottom_leftY+(n-1)*cardDis) 
+	end case
+    end addCard
+    
+    proc copyCard(var point:pointer to Card,n:int)                      % card pointer saves a specific card
+	point:=handInfo(n).card
+    end copyCard
+    
+    proc pasteCard(point:pointer to Card)                               % pastes a card from a ^Card into the hand 
+	new handInfo,upper(handInfo)+1
+	var n:int:=upper(handInfo)
+	handInfo(n).raiseAmount:=0
+	if point->returnCardBackC=shadeC(1) then
+	    handInfo(n).shaded:=true
+	else         
+	    handInfo(n).shaded:=false
+	end if
+	handInfo(n).shiftAmount:=0
+
+	new Card,handInfo(n).card
+	handInfo(n).card:=point
+	if simpleG xor handInfo(n).card->returnCardSimpleG then
+	    handInfo(n).card-> changeCardSimpleG
+	end if
+	handInfo(n).card -> setCardSize(cardW,cardH)
+	handInfo(n).card -> setDirection(cardDir)
+	case cardDir of
+	    label 1:
+		handInfo(n).card -> setCardCoordinates(bottom_leftX+(n-1)*cardDis,bottom_leftY)
+	    label 2:
+		handInfo(n).card -> setCardCoordinates(bottom_leftX,bottom_leftY-cardDis)
+	    label 3:
+		handInfo(n).card -> setCardCoordinates(bottom_leftX-cardDis,bottom_leftY) 
+	    label 4:
+		handInfo(n).card -> setCardCoordinates(bottom_leftX,bottom_leftY+(n-1)*cardDis) 
+	end case        
+    end pasteCard
+    
+    proc removeCard(r1,r2:int)                                          % removes a range of cards from the hand
+	var cardsReplaced:=0
+	var newSize:int:=upper(handInfo)-(r2-r1+1)
+	if upper(handInfo)>1 then
+	    var tempInfo:flexible array 1..newSize of sets
+	    for i:1..upper(handInfo)
+		exit when cardsReplaced=newSize
+		if i<r1 or i>r2 then
+		    new Card,tempInfo(cardsReplaced+1).card
+		    tempInfo(cardsReplaced+1).card:=handInfo(i).card
+		    tempInfo(cardsReplaced+1).raiseAmount:=handInfo(i).raiseAmount
+		    tempInfo(cardsReplaced+1).shaded:=handInfo(i).shaded
+		    tempInfo(cardsReplaced+1).shiftAmount:=handInfo(i).shiftAmount
+		    cardsReplaced+=1
+		end if
+	    end for
+	    new handInfo,newSize
+	    for i:1..newSize
+		handInfo(i).card:=tempInfo(i).card
+		handInfo(i).raiseAmount:=tempInfo(i).raiseAmount
+		handInfo(i).shaded:=tempInfo(i).shaded
+		handInfo(i).shiftAmount:=tempInfo(i).shiftAmount
+	    end for
+	else
+	    new handInfo,newSize
+	end if
+    end removeCard
+    
+    proc shiftCards(r1,r2,a:int)                                        % shifts cards in the hand by a certain distance
+	for i:r1..r2
+	    handInfo(i).shiftAmount+=a
+	end for
+    end shiftCards
+    
+    proc switchCards(n1,n2:int)                                         % swaps the lcoation of 2 cards
+	var tempset:sets
+	tempset:=handInfo(n1)
+	handInfo(n1):=handInfo(n2)
+	handInfo(n2):=tempset
+    end switchCards
+    
+    proc shuffleHand(r1,r2:int)                                         % shuffles the hand
+	var range:int:=r2-r1+1
+	for i:r1..r2
+	    switchCards(i,r1+Rand.Int(1,range)-1)
+	end for
+    end shuffleHand
+    
+    proc sortByNumber(high:int)                                         % sorts the hand from the lowest number to the highest number(suits are sorted after(D,C,H,S))
+	% Ex: for big 2, each hand will be sorted by number with a high of 2                                                                
+	var isSorted:boolean
+	loop
+	    isSorted:=true
+	    for i:1..upper(handInfo)-1
+		if (handInfo(i).card->returnCardN<handInfo(i+1).card->returnCardN) then
+		    if (handInfo(i+1).card->returnCardN>high and handInfo(i).card->returnCardN<=high) then
+			switchCards(i,i+1)
+			isSorted:=false
+		    end if
+		elsif (handInfo(i).card->returnCardN>handInfo(i+1).card->returnCardN) then
+		    if ~(handInfo(i+1).card->returnCardN<=high and handInfo(i).card->returnCardN>high) then
+			switchCards(i,i+1)
+			isSorted:=false                    
+		    end if
+		else
+		    if (handInfo(i).card->returnCardSuit<handInfo(i+1).card->returnCardSuit) then
+			switchCards(i,i+1)
+			isSorted:=false                     
+		    end if
+		end if
+	    end for
+	    exit when isSorted
+	end loop
+    end sortByNumber
+    
+    proc sortBySuit(high:int)                                           % sorts the hand by suit, then by Number
+	% For example, in hearts, the hands are sorted by suit with a high card of ace(1)
+	var isSorted:boolean
+	loop
+	    isSorted:=true
+	    for i:1..upper(handInfo)-1
+		if handInfo(i).card->returnCardSuit<handInfo(i+1).card->returnCardSuit then
+		    switchCards(i,i+1)
+		    isSorted:=false 
+		elsif handInfo(i).card->returnCardSuit=handInfo(i+1).card->returnCardSuit then
+		    if (handInfo(i).card->returnCardN<handInfo(i+1).card->returnCardN) then
+			if (handInfo(i+1).card->returnCardN>high and handInfo(i).card->returnCardN<=high) then
+			    switchCards(i,i+1)
+			    isSorted:=false
+			end if
+		    elsif (handInfo(i).card->returnCardN>handInfo(i+1).card->returnCardN) then
+			if ~(handInfo(i+1).card->returnCardN<=high and handInfo(i).card->returnCardN>high) then
+			    switchCards(i,i+1)
+			    isSorted:=false                    
+			end if
+		    end if
+		end if    
+	    end for
+	    exit when isSorted
+	end loop
+    end sortBySuit
+
+    proc raiseCards(r1,r2:int)                                          % raise a range of cards
+	for i:r1..r2
+	    handInfo(i).raiseAmount+=raiseDis
+	end for
+    end raiseCards
+    
+    proc lowerCards(r1,r2:int)                                          % lowes a range of cards
+	for i:r1..r2
+	    handInfo(i).raiseAmount-=raiseDis
+	end for
+    end lowerCards
+    
+    proc resetRaised(r1,r2:int)                                         % resets hte raise amount of each card to 0.
+	for i:r1..r2
+	    handInfo(i).raiseAmount:=0
+	end for
+    end resetRaised
+
+    proc resetShiftAmount(r1,r2:int)                                    % resets the shift amount of each card to 0.
+	for i:r1..r2
+	    handInfo(i).shiftAmount:=0
+	end for
+    end resetShiftAmount
+    
+    proc setDimensions(w,h:int)                                         % set the size of the cards
+	cardW:=w
+	cardH:=h
+	for i:1..upper(handInfo)
+	    handInfo(i).card -> setCardSize(cardW,cardH)
+	end for
+    end setDimensions
+    
+    proc setAllSimpleG                                                  % set all the cards to Simple Graphics
+	simpleG:=true
+	for i:1..upper(handInfo)
+	    if ~handInfo(i).card->returnCardSimpleG then
+		handInfo(i).card->changeCardSimpleG
+	    end if
+	end for
+    end setAllSimpleG
+    
+    proc setAllNotSimpleG                                               % set all the cards to not Simple Graphics
+	simpleG:=false
+	for i:1..upper(handInfo)
+	    if handInfo(i).card->returnCardSimpleG then
+		handInfo(i).card->changeCardSimpleG
+	    end if
+	end for
+    end setAllNotSimpleG
+    
+    proc flipCards(r1,r2:int)                                           % flips a range of cards
+	for i:r1..r2
+	    handInfo(i).card->flipCard
+	end for
+    end flipCards
+    
+    proc setFaceUp(r1,r2:int)                                           % sets a range of cards as face up
+	for i:r1..r2
+	    if handInfo(i).card->returnCardisFlipped then
+		handInfo(i).card->flipCard
+	    end if
+	end for
+    end setFaceUp
+    
+    proc setFaceDown(r1,r2:int)                                         % sets a range of cards as face up
+	for i:r1..r2
+	    if ~handInfo(i).card->returnCardisFlipped then
+		handInfo(i).card->flipCard
+	    end if        
+	end for
+    end setFaceDown
+    
+    proc setCardDistance(n:int)                                         % sets the distance between each card
+	cardDis:=n
+    end setCardDistance
+    
+    proc setCoordinates(x,y:int)                                        % sets the coordinates of the hand
+	bottom_leftX:=x
+	bottom_leftY:=y
+    end setCoordinates
+    
+    proc setCoordinatesByCenter(x,y:int)                                % sets the coordinates of the hand by the center of the hand
+	if cardDir mod 2=1 then
+	    bottom_leftX:=x-(cardDis*(upper(handInfo)-1)+cardW)div 2
+	    bottom_leftY:=y-cardH div 2
+	else
+	    bottom_leftY:=y-(cardDis*(upper(handInfo)-1)+cardW)div 2
+	    bottom_leftX:=x-cardH div 2
+	end if
+    end setCoordinatesByCenter
+    
+    proc setDirection(n:int)                                            % sets the direction of the hand
+	cardDir:=n
+    end setDirection
+    
+    proc setRaiseDis(n:int)                                             % sets the raise distance
+	raiseDis:=n
+    end setRaiseDis
+    
+    proc shadeCard(r1,r2:int)                                           % shades a range of cards
+	for n:r1..r2
+	    if ~handInfo(n).shaded then
+		handInfo(n).shaded:=true
+		handInfo(n).card->setCardColourBack(shadeC(1))
+		if handInfo(n).card->returnCardSuit mod 2 = 1 then
+		    handInfo(n).card->setCardColour(shadeC(2))
+		else
+		    handInfo(n).card->setCardColour(shadeC(3))
+		end if
+	    end if 
+	end for
+    end shadeCard
+    
+    proc unshadeCard(r1,r2:int)                                         %unshades a range of cards
+	for n:r1..r2
+	    if handInfo(n).shaded then
+		handInfo(n).shaded:=false
+		handInfo(n).card->setCardColourBack(colors(1))
+		if handInfo(n).card->returnCardSuit mod 2 = 1 then
+		    handInfo(n).card->setCardColour(colors(2))
+		else
+		    handInfo(n).card->setCardColour(colors(3))
+		end if
+	    end if 
+	end for    
+    end unshadeCard
+
+    proc drawHand(n1,n2:int)                                            % draws the hand
+	for i:n1..n2
+	    handInfo(i).card->drawCard
+	end for
+    end drawHand
+    
+    fcn returnIsShaded(n:int):boolean                                   % returns if a card is shaded
+	result handInfo(n).shaded
+    end returnIsShaded
+    
+    fcn returnRaiseDis:int                                              % returns the raise distance 
+	result raiseDis
+    end returnRaiseDis
+    
+    fcn returnDir:int                                                   % returns the direction of the hand
+	result cardDir
+    end returnDir
+    
+    fcn returnShiftAmount(n:int):int                                    % returns the shift amounr of a specific card
+	result handInfo(n).shiftAmount
+    end returnShiftAmount
+    
+    fcn returnSize:int                                                  % returns the size of the hand
+	result upper(handInfo)
+    end returnSize
+
+    fcn returnCardWidth:int                                             % retrusn the width of the card
+	result cardW
+    end returnCardWidth
+    
+    fcn returnCardHeight:int                                            % returns the height of the card
+	result cardH
+    end returnCardHeight
+    
+    fcn returnHandX:int                                                 % returns the bottom left x-coordinates of the hand
+	result bottom_leftX
+    end returnHandX
+    
+    fcn returnHandY:int                                                 % returns the bottom left y-coordinates of the hand
+	result bottom_leftY
+    end returnHandY
+    
+    fcn returnCardX(i:int):int                                          % returns the x-coordinates of a specific card
+	result handInfo(i).card->returnCardX
+    end returnCardX
+    
+    fcn returnCardY(i:int):int                                          % returns the y-coordinates of a specific card
+	result handInfo(i).card->returnCardY
+    end returnCardY
+    
+    fcn returnCardDis:int                                               % returns the distance between each card
+	result cardDis
+    end returnCardDis
+    
+    fcn returnSimpleG:boolean                                           % returns whether simple graphics are used
+	result simpleG
+    end returnSimpleG
+    
+    fcn returnCardSuit(n:int):int                                       % returns a card's suit
+	result handInfo(n).card->returnCardSuit
+    end returnCardSuit
+    
+    fcn returnCardNum(n:int):int                                        % returns a card's number
+	result handInfo(n).card->returnCardN
+    end returnCardNum
+    
+    fcn returnRaiseAmount(n:int):int                                    % returns how much a card has risen
+	result handInfo(n).raiseAmount
+    end returnRaiseAmount
+    
+    fcn isFlipped(n:int):boolean                                        % returns whether a card is flipped
+	result handInfo(n).card->returnCardisFlipped
+    end isFlipped
+    
+    fcn returnCardCenterX:int                                               % returns the x coordinates of the center of a hand
+	if cardDir mod 2 = 1 then
+	    result bottom_leftX+((upper(handInfo)-1)*cardDis+cardW) div 2
+	else
+	    result bottom_leftX+cardH div 2
+	end if
+    end returnCardCenterX
+    
+    fcn returnCardCenterY:int                                               % returns the y coordinates of the center of the hand
+	if cardDir mod 2 = 0 then
+	    result bottom_leftY+((upper(handInfo)-1)*cardDis+cardW) div 2
+	else
+	    result bottom_leftY+cardH div 2
+	end if    
+    end returnCardCenterY
+ 
+    fcn returnCard(n:int):pointer to Card                                   % returns the pointer to a specific card
+	result handInfo(n).card
+    end returnCard
+end Hand
